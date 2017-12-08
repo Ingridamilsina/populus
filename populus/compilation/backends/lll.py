@@ -1,6 +1,23 @@
+import os
+
 from .base import (
     BaseCompilerBackend,
 )
+from populus.utils.filesystem import (
+    is_executable_available
+)
+
+
+class LLLCompiler(object):
+    """ TODO """
+    def __init__(self):
+        self.lllc_binary = os.environ.get('LLLC_BINARY', 'lllc')
+        if not is_executable_available(self.lllc_binary):
+            raise FileNotFoundError("lllc compiler executable not found!")
+
+    def compile(self, bytecode_runtime=False):
+        # FIXME: implement
+        pass
 
 
 class LLLBackend(BaseCompilerBackend):
@@ -8,12 +25,7 @@ class LLLBackend(BaseCompilerBackend):
     test_source_glob = ('test_*.lll')
 
     def get_compiled_contracts(self, source_file_paths, import_remappings):
-        try:
-            from ethereum_lll import compiler # TODO: implement
-        except ImportError:
-            raise ImportError(
-                'Package ethereum-lll needs to be installed to use LLLBackend as compiler backend.'
-            )
+        compiler  = LLLCompiler()
 
         self.logger.debug("Compiler Settings: %s", pprint.pformat(self.compiler_settings))
 
@@ -28,6 +40,7 @@ class LLLBackend(BaseCompilerBackend):
                 raise e
 
             bytecode = '0x' + compiler.compile(code).hex()
+            # FIXME: `lllc` currently has no option for this!
             bytecode_runtime = '0x' + compiler.compile(code, bytecode_runtime=True).hex()
 
             compiled_contracts.append({
