@@ -24,20 +24,24 @@ class LLLCompiler(object):
         proc = subprocess.Popen([self.lllc_binary, '-x'],
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+                                stderr=subprocess.PIPE,
+                                universal_newlines=True)
         stdoutdata, stderrdata = proc.communicate(code)
-        return stdoutdata
+        return stdoutdata.rstrip()
 
     def strip(self, bytecode):
         """ Strips compiler-given bytecode of parts that will not be present at runtime. """
-        # TODO: implement
 
         # remove deployment code: head up to (and including) ``PUSH1 0x00 RETURN STOP``
-        # (\x60\x00\xf3\x00)
+        res = bytecode.split('6000f300', maxsplit=1)
+        if res == bytecode:
+            return ''
+        nohead = res[-1]
 
-        # remove deployment data: tail from (and including) last ``JUMPDEST`` (\x5b)
-
-        return
+        # remove deployment data: tail from (and including) last ``JUMPDEST``
+        res = nohead.rsplit('5b', maxsplit=1)
+        notail = res[0]
+        return notail
 
 
 class LLLBackend(BaseCompilerBackend):
@@ -59,8 +63,10 @@ class LLLBackend(BaseCompilerBackend):
                 self.logger.error(".lll files require an accompanying .lll.abi JSON ABI file!")
                 raise e
 
-            bytecode = '0x' + compiler.compile(code).hex()
-            bytecode_runtime = '0x' + compiler.strip(bytecode).hex()
+            bytecode = '0x' + compiler.compile(code)
+            pprint.pprint(bytecode)
+            bytecode_runtime = '0x' + compiler.strip(bytecode)
+            pprint.pprint(bytecode_runtime)
 
             compiled_contracts.append({
                 'name': os.path.basename(contract_path).split('.')[0],
