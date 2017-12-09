@@ -1,3 +1,4 @@
+import json
 import os
 import pprint
 import subprocess
@@ -58,15 +59,14 @@ class LLLBackend(BaseCompilerBackend):
         for contract_path in source_file_paths:
             code = open(contract_path).read()
             try:
-                abi = open(contract_path + '.abi').read()
+                with open(contract_path + '.abi') as jsonabi:
+                    abi = json.load(jsonabi)
             except FileNotFoundError as e:
                 self.logger.error(".lll files require an accompanying .lll.abi JSON ABI file!")
                 raise e
 
             bytecode = '0x' + compiler.compile(code)
-            pprint.pprint(bytecode)
             bytecode_runtime = '0x' + compiler.strip(bytecode)
-            pprint.pprint(bytecode_runtime)
 
             compiled_contracts.append({
                 'name': os.path.basename(contract_path).split('.')[0],
