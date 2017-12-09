@@ -1,4 +1,6 @@
 import os
+import pprint
+import subprocess
 
 from .base import (
     BaseCompilerBackend,
@@ -8,16 +10,34 @@ from populus.utils.filesystem import (
 )
 
 
+# FIXME: move where appropriate - separate package if needed.
 class LLLCompiler(object):
     """ TODO """
     def __init__(self):
         self.lllc_binary = os.environ.get('LLLC_BINARY', 'lllc')
         if not is_executable_available(self.lllc_binary):
             raise FileNotFoundError("lllc compiler executable not found!")
+        return
 
-    def compile(self, bytecode_runtime=False):
-        # FIXME: implement
-        pass
+    def compile(self, code):
+        """ Passes an LLL program to the ``lllc`` compiler. """
+        proc = subprocess.Popen([self.lllc_binary, '-x'],
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        stdoutdata, stderrdata = proc.communicate(code)
+        return stdoutdata
+
+    def strip(self, bytecode):
+        """ Strips compiler-given bytecode of parts that will not be present at runtime. """
+        # TODO: implement
+
+        # remove deployment code: head up to (and including) ``PUSH1 0x00 RETURN STOP``
+        # (\x60\x00\xf3\x00)
+
+        # remove deployment data: tail from (and including) last ``JUMPDEST`` (\x5b)
+
+        return
 
 
 class LLLBackend(BaseCompilerBackend):
@@ -40,8 +60,7 @@ class LLLBackend(BaseCompilerBackend):
                 raise e
 
             bytecode = '0x' + compiler.compile(code).hex()
-            # FIXME: `lllc` currently has no option for this!
-            bytecode_runtime = '0x' + compiler.compile(code, bytecode_runtime=True).hex()
+            bytecode_runtime = '0x' + compiler.strip(bytecode).hex()
 
             compiled_contracts.append({
                 'name': os.path.basename(contract_path).split('.')[0],
