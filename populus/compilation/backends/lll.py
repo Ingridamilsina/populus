@@ -35,9 +35,9 @@ class LLLCompiler(object):
 
         # remove deployment code: head up to (and including) ``PUSH1 0x00 RETURN STOP``
         res = bytecode.split('6000f300', maxsplit=1)
-        if res == bytecode:
-            return ''
         nohead = res[-1]
+        if nohead == bytecode:
+            return ''
 
         # remove deployment data: tail from (but not including) last ``JUMPDEST``
         res = nohead.rsplit('5b', maxsplit=1)
