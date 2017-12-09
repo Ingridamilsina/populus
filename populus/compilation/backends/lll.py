@@ -39,9 +39,9 @@ class LLLCompiler(object):
             return ''
         nohead = res[-1]
 
-        # remove deployment data: tail from (and including) last ``JUMPDEST``
+        # remove deployment data: tail from (but not including) last ``JUMPDEST``
         res = nohead.rsplit('5b', maxsplit=1)
-        notail = res[0]
+        notail = res[0] + '5b'
         return notail
 
 
