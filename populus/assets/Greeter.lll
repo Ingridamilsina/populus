@@ -8,16 +8,20 @@
   ;; CONSTANTS
 
   (def 'initial-greeting (lit 0x40 "Hello, lovely!.. <3"))
-  (def 'current-greeting 0x1337) ; storage location - 0xef690cc0 too confusing
 
-  (def 'greet        0xcfae3217) ; greet()
-  (def 'greeting     0xef690cc0) ; greeting(): public storage in Solidity
-  (def 'set-greeting 0xa4136862) ; setGreeting(string)
+  (def '*greet*        0xcfae3217) ; greet()
+  (def '*greeting*     0xef690cc0) ; greeting(): public storage in Solidity
+  (def '*set-greeting* 0xa4136862) ; setGreeting(string)
 
   ;; ==========================================================================
   ;; MEMORY LAYOUT
 
   (def '*funcid* 0x20)
+
+  ;; ==========================================================================
+  ;; STORAGE LAYOUT
+
+  (def '*current-greeting* 0x1337)
 
   ;; ==========================================================================
   ;; STDLIB
@@ -65,7 +69,7 @@
 
   (seq
     unpayable
-    (sstore current-greeting initial-greeting) ; FIXME: stores greeting len!
+    (sstore *current-greeting* initial-greeting) ; FIXME: stores greeting len!
   )
 
   ;; ==========================================================================
@@ -78,18 +82,21 @@
 
      ;; change greeting value in storage
      (def 'new-greeting (calldataload 0x04))
-     (function set-greeting
+     (function *set-greeting*
                (seq
-                 (sstore current-greeting new-greeting) ; FIXME: as above?..
+                 (sstore *current-greeting* new-greeting) ; FIXME: as above?..
                  (return 0)))
 
      ;; return greeting value from storage
-     (function greet
-               (return (sload current-greeting)))
+     (function *greet*
+               (return (sload *current-greeting*)))
 
      ;; for compatibility with Greeter.sol: "public storage variable"
-     (function greeting
-               (return (sload current-greeting)))
+     (function *greeting*
+               (return (sload *current-greeting*)))
+
+     ;; fallback
+     (panic)
    )
   )
 )
