@@ -69,8 +69,7 @@
 
   (seq
     unpayable
-    (sstore *current-greeting* initial-greeting) ; FIXME: stores greeting len!
-  )
+    (sstore *current-greeting* initial-greeting)) ; FIXME: stores greeting len!
 
   ;; ==========================================================================
   ;; CODE
@@ -96,7 +95,4 @@
                (return (sload *current-greeting*)))
 
      ;; fallback
-     (panic)
-   )
-  )
-)
+     (panic))))
