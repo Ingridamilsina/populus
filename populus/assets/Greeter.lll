@@ -5,23 +5,25 @@
 
 (seq
   ;; ==========================================================================
-  ;; CONSTANTS
-
-  (def 'initial-greeting (lit 0x40 "Hello, lovely!.. <3"))
-
-  (def '*greet*        0xcfae3217) ; greet()
-  (def '*greeting*     0xef690cc0) ; greeting(): public storage in Solidity
-  (def '*set-greeting* 0xa4136862) ; setGreeting(string)
-
-  ;; ==========================================================================
   ;; MEMORY LAYOUT
 
   (def '*function-selector* 0x20)
+  (def '*litlen* 0x40) ; literal length
+  (def '*litloc* 0x60) ; literal location
 
   ;; ==========================================================================
   ;; STORAGE LAYOUT
 
   (def '*current-greeting* 0x1337)
+
+  ;; ==========================================================================
+  ;; CONSTANTS
+
+  (def '*initial-greeting* (lit *litloc* "Hello, lovely!.. <3"))
+
+  (def '*greet*        0xcfae3217) ; greet()
+  (def '*greeting*     0xef690cc0) ; greeting(): public storage in Solidity
+  (def '*set-greeting* 0xa4136862) ; setGreeting(string)
 
   ;; ==========================================================================
   ;; STDLIB
@@ -41,6 +43,7 @@
   ;; @notice Gets the function ID and stores it in memory for reference.
   ;; @dev The function ID is stored at a pre-defined location 0x20 and will
   ;;      be read from memory every time instead of duplicated on stack.
+  ;; TODO: consider lll-docs lll_abi.html#passing-data-to-a-function
 
   (def 'mstore-function-selector
        (mstore *function-selector* (shift-right (calldataload 0x00))))
@@ -66,11 +69,19 @@
        (when (callvalue) (panic)))
 
   ;; ==========================================================================
+  ;; NIHLIB
+
+  (def 'sstore-literal (location literal)
+       (seq
+         (mstore *litlen* literal)
+         (mload *litloc*)))
+
+  ;; ==========================================================================
   ;; INIT
 
   (seq
     unpayable
-    (sstore *current-greeting* initial-greeting)) ; FIXME: stores greeting len!
+    (sstore-literal *current-greeting* *initial-greeting*))
 
   ;; ==========================================================================
   ;; CODE
@@ -84,7 +95,7 @@
      (def 'new-greeting (calldataload 0x04))
      (function *set-greeting*
                (seq
-                 (sstore *current-greeting* new-greeting) ; FIXME: as above?..
+                 (sstore-literal *current-greeting* new-greeting)
                  (stop)))
 
      ;; return greeting value from storage
