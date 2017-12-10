@@ -85,7 +85,7 @@
      (function *set-greeting*
                (seq
                  (sstore *current-greeting* new-greeting) ; FIXME: as above?..
-                 (return 0)))
+                 (stop)))
 
      ;; return greeting value from storage
      (function *greet*
