@@ -42,24 +42,32 @@
   ;; --------------------------------------------------------------------------
   ;; INIT
 
-  (sstore current-greeting initial-greeting)
+  (seq
+    (when (callvalue) (panic))                 ; non-payable
+    (sstore current-greeting initial-greeting) ; FIXME: stores greeting len!
+  )
 
   ;; --------------------------------------------------------------------------
   ;; CODE
 
   (returnlll
    (seq
-     ;;
+     (when (callvalue) (panic))                         ; non-payable
+
+     ;; change greeting value in storage
      (def 'new-greeting (calldataload 0x04))
      (function set-greeting
-               (sstore current-greeting new-greeting))
+               (seq
+                 (sstore current-greeting new-greeting) ; FIXME: as above?..
+                 (return 0)))
 
-     ;;
+     ;; return greeting value from storage
      (function greet
                (return (sload current-greeting)))
-     ;; for compatibility with Greeter.sol
+
+     ;; for compatibility with Greeter.sol: "public storage variable"
      (function greeting
                (return (sload current-greeting)))
-     )
    )
   )
+)
