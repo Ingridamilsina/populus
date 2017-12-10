@@ -1,10 +1,10 @@
-;;;; --------------------------------------------------------------------------
+;;;; ==========================================================================
 ;;;; @title Lovely Little Greeter
 ;;;; @author Noel Maersk <veox>
 ;;;; WARNING: untested!
 
 (seq
-  ;; --------------------------------------------------------------------------
+  ;; ==========================================================================
   ;; CONSTANTS
 
   (def 'initial-greeting (lit 0x40 "Hello, lovely!.. <3"))
@@ -14,7 +14,12 @@
   (def 'greeting     0xef690cc0) ; greeting(): public storage in Solidity
   (def 'set-greeting 0xa4136862) ; setGreeting(string)
 
-  ;; --------------------------------------------------------------------------
+  ;; ==========================================================================
+  ;; MEMORY LAYOUT
+
+  (def '*funcid* 0x20)
+
+  ;; ==========================================================================
   ;; STDLIB
 
   ;; --------------------------------------------------------------------------
@@ -28,6 +33,15 @@
        (div input (exp 2 224)))
 
   ;; --------------------------------------------------------------------------
+  ;; @author Ben Edgington <benjaminion>
+  ;; @notice Gets the function ID and stores it in memory for reference.
+  ;; @dev The function ID is stored at a pre-defined location 0x20 and will
+  ;;      be read from memory every time instead of duplicated on stack.
+
+  (def 'get-function-id
+       (mstore *funcid* (shift-right (calldataload 0x00))))
+
+  ;; --------------------------------------------------------------------------
   ;; @author Daniel Ellison <zigguratt>
   ;; @notice Determines whether the supplied function ID matches a known
   ;;         function hash and executes <code-body> if so.
@@ -36,23 +50,31 @@
   ;; @param code-body The code to run in the case of a match.
 
   (def 'function (function-hash code-body)
-       (when (= (shift-right (calldataload 0x00)) function-hash)
+       (when (= (mload *funcid*) function-hash)
          code-body))
 
   ;; --------------------------------------------------------------------------
+  ;; @author Daniel Ellison <zigguratt>
+  ;; @notice Modifier macro to prevent unintended payments.
+
+  (def 'unpayable
+       (when (callvalue) (panic)))
+
+  ;; ==========================================================================
   ;; INIT
 
   (seq
-    (when (callvalue) (panic))                 ; non-payable
+    unpayable
     (sstore current-greeting initial-greeting) ; FIXME: stores greeting len!
   )
 
-  ;; --------------------------------------------------------------------------
+  ;; ==========================================================================
   ;; CODE
 
   (returnlll
    (seq
-     (when (callvalue) (panic))                         ; non-payable
+     unpayable
+     get-function-id
 
      ;; change greeting value in storage
      (def 'new-greeting (calldataload 0x04))
