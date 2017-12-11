@@ -1,6 +1,7 @@
 import json
 import os
 import pprint
+import re
 import subprocess
 
 from .base import (
@@ -20,8 +21,20 @@ class LLLCompiler(object):
             raise FileNotFoundError("lllc compiler executable not found!")
         return
 
+    def _find_literals(self, code):
+        """ Retrieves literal definitions from the source tree. """
+        proc = subprocess.Popen([self.lllc_binary, '-t'],
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                universal_newlines=True)
+        stdoutdata, stderrdata = proc.communicate(code)
+        # literals will be of pattern: ( lit <memloc> "<literal>" )
+        literals = re.findall('\( lit [0-9]* \"(.*)\" \)', stdoutdata)
+        return literals
+
     def compile(self, code):
-        """ Passes an LLL program to the ``lllc`` compiler. """
+        """ Compiles LLL sources to hex bytecode. """
         proc = subprocess.Popen([self.lllc_binary, '-x'],
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
@@ -30,19 +43,20 @@ class LLLCompiler(object):
         stdoutdata, stderrdata = proc.communicate(code)
         return stdoutdata.rstrip()
 
-    def strip(self, bytecode):
-        """ Strips compiler-given bytecode of parts that will not be present at runtime. """
-
+    def strip(self, bytecode, code):
+        """ Strips compiled bytecode of parts that will not be present at runtime. """
         # remove deployment code: head up to (and including)
         # ``PUSH1 0x00 CODECOPY PUSH1 0x00 RETURN STOP``
-        res = bytecode.split('6000396000f300', maxsplit=1)
-        nohead = res[-1]
+        result = bytecode.split('6000396000f300', maxsplit=1)
+        nohead = result[-1]
         if nohead == bytecode:
             return ''
 
-        # remove deployment data: tail from (but not including) NIH-marker ``STOP STOP STOP``
-        res = nohead.rsplit('000000', maxsplit=1)
-        notail = res[0] + '000000'
+        # remove deployment data: literals
+        literals = self._find_literals(code)
+        totallen = len(bytes(''.join(literals), encoding='utf'))
+        print('>>>', totallen)
+        notail = nohead[0:-(totallen*2)] # *2, since already a hex-encoded string
         return notail
 
 
@@ -67,7 +81,7 @@ class LLLBackend(BaseCompilerBackend):
                 raise e
 
             bytecode = '0x' + compiler.compile(code)
-            bytecode_runtime = '0x' + compiler.strip(bytecode)
+            bytecode_runtime = '0x' + compiler.strip(bytecode, code)
 
             compiled_contracts.append({
                 'name': os.path.basename(contract_path).split('.')[0],
